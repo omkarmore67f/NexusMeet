@@ -35,7 +35,17 @@ const allowedOrigins = [
 
 const io = socketio(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const normOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+      const normClient = clientUrl.endsWith('/') ? clientUrl.slice(0, -1) : clientUrl;
+      const isVercelDomain = normOrigin.endsWith('.vercel.app') || 
+                             /https:\/\/[a-zA-Z0-9-]+\.vercel\.app/.test(normOrigin);
+      if (normOrigin === normClient || normOrigin === 'http://localhost:5173' || isVercelDomain) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }
@@ -55,7 +65,11 @@ app.use(
       if (!origin) return callback(null, true);
       const normOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
       const normClient = clientUrl.endsWith('/') ? clientUrl.slice(0, -1) : clientUrl;
-      if (normOrigin === normClient || normOrigin === 'http://localhost:5173') {
+      
+      const isVercelDomain = normOrigin.endsWith('.vercel.app') || 
+                             /https:\/\/[a-zA-Z0-9-]+\.vercel\.app/.test(normOrigin);
+                             
+      if (normOrigin === normClient || normOrigin === 'http://localhost:5173' || isVercelDomain) {
         return callback(null, origin);
       }
       return callback(new Error('Not allowed by CORS'));
