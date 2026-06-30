@@ -27,9 +27,15 @@ const app = express();
 const server = http.createServer(app);
 
 // Enable Socket.io with robust CORS options
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = [
+  clientUrl,
+  clientUrl.endsWith('/') ? clientUrl.slice(0, -1) : clientUrl + '/'
+];
+
 const io = socketio(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }
@@ -45,7 +51,15 @@ app.use(
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const normOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+      const normClient = clientUrl.endsWith('/') ? clientUrl.slice(0, -1) : clientUrl;
+      if (normOrigin === normClient || normOrigin === 'http://localhost:5173') {
+        return callback(null, origin);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
   })
 );
